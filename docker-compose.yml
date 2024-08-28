@@ -1,0 +1,39 @@
+networks:
+    bridge:
+
+services:
+    cassandra_db:
+        image: cassandra:4.1.6
+        ports:
+            - "9042:9042"
+        environment:
+            - CASSANDRA_USERNAME=cassandra
+            - CASSANDRA_PASSWORD=cassandra
+        networks:
+            - bridge
+        volumes:
+            - cassandra-data:/var/lib/cassandra
+        healthcheck:
+            test: [ "CMD-SHELL", "cqlsh -u cassandra -p cassandra -e 'DESCRIBE KEYSPACES;'" ]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+
+    cassandra-example:
+        image: golang-cassandra-example
+        restart: on-failure
+        build:
+            context: .
+            dockerfile: Dockerfile
+        environment:
+            - CASSANDRA_CONTACT_POINT=cassandra_db
+            - CASSANDRA_USERNAME=cassandra
+            - CASSANDRA_PASSWORD=cassandra
+        networks:
+            - bridge
+        depends_on:
+            cassandra_db:
+                condition: service_healthy
+
+volumes:
+    cassandra-data:
